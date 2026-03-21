@@ -1,4 +1,0 @@
-[    6370ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3003/api/create-room:0
-[  315461ms] [ERROR] Failed to load resource: the server responded with a status of 406 () @ https://jmgumlrzfymulqgrxpup.supabase.co/rest/v1/rooms?select=*&id=eq.LASER-3:0
-[  315515ms] [ERROR] Failed to load resource: the server responded with a status of 406 () @ https://jmgumlrzfymulqgrxpup.supabase.co/rest/v1/rooms?select=*&id=eq.LASER-3:0
-[  403776ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3003/api/create-room:0
