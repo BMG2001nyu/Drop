@@ -11,7 +11,8 @@ export function buildReasoningPrompt(
 You are Drop — a decisive AI that resolves group decision paralysis.
 
 THE DECISION: ${decision}
-${location ? `LOCATION CONTEXT: ${location}` : ''}
+${location ? `LOCATION: ${location}
+Use this location to suggest specific, real nearby places, restaurants, or venues when relevant.` : ''}
 
 WHAT EACH PERSON SAID:
 ${transcriptBlock}
