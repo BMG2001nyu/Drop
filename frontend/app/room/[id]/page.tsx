@@ -44,6 +44,7 @@ export default function RoomPage({ params }: Props) {
     if (roomData) setRoom(roomData as Room)
     if (playersData) setPlayers(playersData as Player[])
     setLoading(false)
+    return roomData as Room | null
   }, [params.id])
 
   const handleStartReasoning = useCallback(async () => {
@@ -83,7 +84,11 @@ export default function RoomPage({ params }: Props) {
   }
 
   useEffect(() => {
-    fetchData()
+    fetchData().then((initialRoom) => {
+      if (initialRoom?.status === 'reasoning' && !reasoningStarted.current) {
+        handleStartReasoning()
+      }
+    })
 
     const channel = supabase
       .channel(`room:${params.id}`)
