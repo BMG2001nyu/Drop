@@ -615,8 +615,6 @@ export default function RoomPage({ params }: Props) {
               roomId={room.id}
               players={players}
               reasoning={reasoningText || room.reasoning_stream || ''}
-              verificationStatus={room.verification_status}
-              verificationMessage={room.verification_message}
             />
           </div>
         )}
