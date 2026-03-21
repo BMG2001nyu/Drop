@@ -40,6 +40,8 @@ export default function RootLayout({
           footerActionLink: 'text-[#FF5C00] hover:text-[#FF8C00]',
           socialButtonsBlockButton: 'border border-white/20 bg-white/5 text-white hover:bg-white/10',
           socialButtonsBlockButtonText: 'text-white font-medium',
+          formFieldInput: 'text-white bg-[#1a1a1a] border-white/20',
+          formFieldLabel: 'text-white/70',
         },
       }}
     >
