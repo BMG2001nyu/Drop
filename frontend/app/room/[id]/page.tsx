@@ -590,6 +590,8 @@ export default function RoomPage({ params }: Props) {
               reason={room.final_reason || ''}
               roomId={room.id}
               players={players}
+              verificationStatus={room.verification_status}
+              verificationMessage={room.verification_message}
             />
           </div>
         )}

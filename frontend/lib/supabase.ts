@@ -14,6 +14,8 @@ export type Room = {
   reasoning_stream: string | null
   final_decision: string | null
   final_reason: string | null
+  verification_status: string | null
+  verification_message: string | null
   host_id: string | null
   created_at: string
 }
