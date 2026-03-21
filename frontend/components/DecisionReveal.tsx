@@ -9,11 +9,9 @@ interface Props {
   reason: string
   roomId: string
   players: Player[]
-  verificationStatus?: string | null
-  verificationMessage?: string | null
 }
 
-export default function DecisionReveal({ decision, reason, roomId, players, verificationStatus, verificationMessage }: Props) {
+export default function DecisionReveal({ decision, reason, roomId, players }: Props) {
   const [phase, setPhase] = useState<'black' | 'flash' | 'blast' | 'full'>('black')
   const [imageData, setImageData] = useState<{ base64: string; mime: string } | null>(null)
   const [imageLoading, setImageLoading] = useState(true)
@@ -110,30 +108,6 @@ export default function DecisionReveal({ decision, reason, roomId, players, veri
             >
               &ldquo;{reason}&rdquo;
             </p>
-          )}
-
-          {/* Verification badge */}
-          {phase === 'full' && (
-            <div className="slide-up mb-8" style={{ animationDelay: '0.4s' }}>
-              {!verificationStatus ? (
-                <span className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-white/40">
-                  <span className="w-2 h-2 rounded-full bg-white/20 animate-pulse" />
-                  Verifying...
-                </span>
-              ) : verificationStatus === 'verified' ? (
-                <span className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-full px-4 py-2 text-sm text-green-400 font-medium">
-                  ✅ {verificationMessage}
-                </span>
-              ) : verificationStatus === 'warning' ? (
-                <span className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-2 text-sm text-yellow-400 font-medium">
-                  ⚠️ {verificationMessage}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-full px-4 py-2 text-sm text-red-400 font-medium">
-                  ❌ {verificationMessage}
-                </span>
-              )}
-            </div>
           )}
 
           {/* Players */}
