@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase, type Room, type Player } from '@/lib/supabase'
+import { ROLES, type Role } from '@/lib/roles'
 import QRDisplay from '@/components/QRDisplay'
 import PlayerGrid from '@/components/PlayerGrid'
 import ReasoningStream from '@/components/ReasoningStream'
 import DecisionReveal from '@/components/DecisionReveal'
+import SpeakingView from '@/components/SpeakingView'
 
 interface Props {
   params: { id: string }
@@ -46,10 +48,12 @@ export default function RoomPage({ params }: Props) {
   const hasAnnouncedMidpoint = useRef(false)
 
   // Host auto-join state
-  const [hostJoinState, setHostJoinState] = useState<'prompt' | 'joined'>('prompt')
+  const [hostJoinState, setHostJoinState] = useState<'prompt' | 'joined' | 'pick-role'>('prompt')
   const [hostPlayer, setHostPlayer] = useState<HostPlayer | null>(null)
   const [hostName, setHostName] = useState('')
   const [hostJoining, setHostJoining] = useState(false)
+  const [hostAvailableRoles, setHostAvailableRoles] = useState<Role[]>([])
+  const [hostHasSpoken, setHostHasSpoken] = useState(false)
 
   // Auto-detected location state
   const [resolvedLocation, setResolvedLocation] = useState<string | null>(null)
@@ -177,6 +181,56 @@ export default function RoomPage({ params }: Props) {
     } finally {
       setHostJoining(false)
     }
+  }
+
+  const handleHostChangeRole = async () => {
+    if (!room) return
+    const res = await fetch(`/api/available-roles?roomId=${room.id}`)
+    if (!res.ok) return
+    const data = await res.json()
+    // Include host's current role so they can re-select it
+    const roles: Role[] = data.availableRoles
+    if (hostPlayer && !roles.find(r => r.id === hostPlayer.role)) {
+      const current = ROLES.find(r => r.id === hostPlayer.role)
+      if (current) roles.unshift(current)
+    }
+    setHostAvailableRoles(roles)
+    setHostJoinState('pick-role')
+  }
+
+  const handleHostRoleSwap = async (newRoleId: string) => {
+    if (!hostPlayer || !room) return
+    if (newRoleId === hostPlayer.role) { setHostJoinState('joined'); return }
+    try {
+      const res = await fetch('/api/change-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId: hostPlayer.id, roomId: room.id, newRoleId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const hp: HostPlayer = {
+        ...hostPlayer,
+        role: data.player.role,
+        roleLabel: data.player.role_label,
+        roleEmoji: data.player.role_emoji,
+      }
+      setHostPlayer(hp)
+      localStorage.setItem(`drop_host_${room.id}`, JSON.stringify(hp))
+      fetchData()
+    } finally {
+      setHostJoinState('joined')
+    }
+  }
+
+  const handleHostTranscript = async (transcript: string) => {
+    if (!hostPlayer || !room) return
+    await fetch('/api/submit-transcript', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId: hostPlayer.id, transcript, roomId: room.id }),
+    })
+    setHostHasSpoken(true)
   }
 
   useEffect(() => {
@@ -327,7 +381,43 @@ export default function RoomPage({ params }: Props) {
                 {hostJoinState === 'joined' && hostPlayer && (
                   <div className="bg-[#FF5C00]/10 border border-[#FF5C00]/30 rounded-2xl p-4 mb-4">
                     <p className="text-[#FF5C00] text-xs uppercase tracking-widest mb-1">You&apos;re in as Host</p>
-                    <p className="text-white font-bold">{hostPlayer.roleEmoji} {hostPlayer.name} · {hostPlayer.roleLabel}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-white font-bold">{hostPlayer.roleEmoji} {hostPlayer.name} · {hostPlayer.roleLabel}</p>
+                      <button
+                        onClick={handleHostChangeRole}
+                        className="text-white/40 hover:text-white text-xs underline transition-colors ml-3"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Host role picker */}
+                {hostJoinState === 'pick-role' && hostPlayer && (
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+                    <p className="text-white/50 text-xs uppercase tracking-widest mb-3">Pick a different role</p>
+                    <div className="space-y-2">
+                      {hostAvailableRoles.map(r => {
+                        const isCurrent = r.id === hostPlayer.role
+                        return (
+                          <button
+                            key={r.id}
+                            onClick={() => handleHostRoleSwap(r.id)}
+                            className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-all text-sm ${
+                              isCurrent ? 'bg-[#FF5C00]/20 border border-[#FF5C00]/40 text-white' : 'bg-white/5 border border-white/10 text-white/70 hover:bg-white/10'
+                            }`}
+                          >
+                            <span>{r.emoji}</span>
+                            <span className="font-semibold">{r.label}</span>
+                            {isCurrent && <span className="ml-auto text-[#FF5C00] text-xs">Current</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <button onClick={() => setHostJoinState('joined')} className="mt-2 text-white/30 text-xs hover:text-white/50 transition-colors">
+                      Cancel
+                    </button>
                   </div>
                 )}
 
@@ -359,26 +449,48 @@ export default function RoomPage({ params }: Props) {
         )}
 
         {/* STATE B: Speaking */}
-        {room.status === 'speaking' && (
-          <div className="w-full max-w-4xl">
-            <div className="text-center mb-8">
-              <h2 className="text-5xl font-black text-white mb-4">Speaking Round</h2>
-              <p className="text-white/40 text-xl">Each person has 15 seconds to speak their role</p>
-            </div>
-            <PlayerGrid players={players} showSpeaking currentRole={room.current_speaker_role} />
+        {room.status === 'speaking' && (() => {
+          const isHostTurn = hostPlayer && room.current_speaker_role === hostPlayer.role && !hostHasSpoken
+          const hostRole = hostPlayer ? ROLES.find(r => r.id === hostPlayer.role) : null
+          return (
+            <div className="w-full max-w-4xl">
+              {/* Host's speaking turn — show full SpeakingView */}
+              {isHostTurn && hostRole ? (
+                <div>
+                  <p className="text-center text-white/40 text-sm uppercase tracking-widest mb-6">Your turn to speak</p>
+                  <SpeakingView
+                    role={hostRole}
+                    playerName={hostPlayer!.name}
+                    onSubmit={handleHostTranscript}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <div className="text-center mb-8">
+                    <h2 className="text-5xl font-black text-white mb-4">Speaking Round</h2>
+                    <p className="text-white/40 text-xl">
+                      {hostPlayer && hostHasSpoken
+                        ? 'You\'ve spoken — waiting for others...'
+                        : 'Each person has 15 seconds to speak their role'}
+                    </p>
+                  </div>
+                  <PlayerGrid players={players} showSpeaking currentRole={room.current_speaker_role} />
+                </div>
+              )}
 
-            {players.every(p => p.has_spoken) && (
-              <div className="mt-8 text-center">
-                <button
-                  onClick={handleStartReasoning}
-                  className="bg-[#FF5C00] hover:bg-[#FF8C00] text-white text-2xl font-black px-12 py-6 rounded-2xl transition-all duration-200 orange-glow"
-                >
-                  All Done — Drop is deciding...
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              {players.every(p => p.has_spoken) && (
+                <div className="mt-8 text-center">
+                  <button
+                    onClick={handleStartReasoning}
+                    className="bg-[#FF5C00] hover:bg-[#FF8C00] text-white text-2xl font-black px-12 py-6 rounded-2xl transition-all duration-200 orange-glow"
+                  >
+                    All Done — Drop is deciding...
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* STATE C: Reasoning */}
         {room.status === 'reasoning' && (
