@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
-import { assignRoles } from '@/lib/roles'
+import { assignRoles, getRoleById } from '@/lib/roles'
 
 export async function POST(req: Request) {
   try {
-    const { roomId, playerName } = await req.json()
+    const { roomId, playerName, roleId } = await req.json()
 
     if (!roomId || !playerName?.trim()) {
       return NextResponse.json({ error: 'Room ID and name are required' }, { status: 400 })
@@ -39,11 +39,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Room is full (max 6 players)' }, { status: 400 })
     }
 
-    // Assign role based on position
+    // Determine available roles
     const allRoles = assignRoles(6)
     const usedRoles = new Set(existingPlayers?.map(p => p.role) || [])
     const availableRoles = allRoles.filter(r => !usedRoles.has(r.id))
-    const assignedRole = availableRoles[0]
+
+    let assignedRole
+    if (roleId) {
+      // Explicit role selection: validate it exists and is available
+      const requestedRole = getRoleById(roleId)
+      if (!requestedRole) {
+        return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+      }
+      if (usedRoles.has(roleId)) {
+        return NextResponse.json({ error: 'That role is already taken', availableRoles }, { status: 409 })
+      }
+      assignedRole = requestedRole
+    } else {
+      // Backward-compat: auto-assign first available role
+      assignedRole = availableRoles[0]
+    }
 
     if (!assignedRole) {
       return NextResponse.json({ error: 'No roles available' }, { status: 400 })
