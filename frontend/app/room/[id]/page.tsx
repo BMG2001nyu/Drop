@@ -59,7 +59,11 @@ export default function RoomPage({ params }: Props) {
       body: JSON.stringify({ roomId: params.id }),
     })
 
-    if (!res.body) return
+    if (!res.body || !res.ok) {
+      console.error('start-reasoning failed:', res.status)
+      reasoningStarted.current = false // allow retry
+      return
+    }
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
 
@@ -75,12 +79,8 @@ export default function RoomPage({ params }: Props) {
     await fetchData()
   }, [params.id, fetchData])
 
-  const handleThoughtComplete = useCallback((thought: string, index: number) => {
-    // Fire voice at the 3rd completed thought (midpoint of 6-10 step reasoning)
-    if (index === 2 && !hasAnnouncedMidpoint.current) {
-      hasAnnouncedMidpoint.current = true
-      playAudio(`So I thought about that... now here's what I'm realizing: ${thought}`, 'challenge')
-    }
+  const handleThoughtComplete = useCallback((_thought: string, _index: number) => {
+    // Voice callouts during reasoning removed — browser blocks audio without user gesture
   }, [])
 
   const handleStartDrop = async () => {
@@ -95,6 +95,15 @@ export default function RoomPage({ params }: Props) {
       body: JSON.stringify({ roomId: room.id }),
     })
   }
+
+  // Trigger reasoning whenever room status becomes 'reasoning' — covers both
+  // the realtime path and the polling path (polling updates room state but
+  // the realtime handler is the only other place handleStartReasoning was called)
+  useEffect(() => {
+    if (room?.status === 'reasoning' && !reasoningStarted.current) {
+      handleStartReasoning()
+    }
+  }, [room?.status, handleStartReasoning])
 
   useEffect(() => {
     fetchData().then((initialRoom) => {
