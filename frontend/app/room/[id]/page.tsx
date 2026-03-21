@@ -35,6 +35,7 @@ export default function RoomPage({ params }: Props) {
   const [reasoningText, setReasoningText] = useState('')
   const hasAnnouncedDecision = useRef(false)
   const reasoningStarted = useRef(false)
+  const hasAnnouncedMidpoint = useRef(false)
 
   const fetchData = useCallback(async () => {
     const [{ data: roomData }, { data: playersData }] = await Promise.all([
@@ -69,6 +70,14 @@ export default function RoomPage({ params }: Props) {
       setReasoningText(prev => prev + chunk)
     }
   }, [params.id])
+
+  const handleThoughtComplete = useCallback((thought: string, index: number) => {
+    // Fire voice at the 3rd completed thought (midpoint of 6-10 step reasoning)
+    if (index === 2 && !hasAnnouncedMidpoint.current) {
+      hasAnnouncedMidpoint.current = true
+      playAudio(`So I thought about that... now here's what I'm realizing: ${thought}`, 'challenge')
+    }
+  }, [])
 
   const handleStartDrop = async () => {
     if (!room) return
@@ -234,7 +243,10 @@ export default function RoomPage({ params }: Props) {
         {/* STATE C: Reasoning */}
         {room.status === 'reasoning' && (
           <div className="w-full max-w-3xl">
-            <ReasoningStream text={reasoningText || room.reasoning_stream || ''} />
+            <ReasoningStream
+            text={reasoningText || room.reasoning_stream || ''}
+            onThoughtComplete={handleThoughtComplete}
+          />
           </div>
         )}
 
