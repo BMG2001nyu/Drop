@@ -85,7 +85,6 @@ export default function JoinPage({ params }: Props) {
         event: 'UPDATE',
         schema: 'public',
         table: 'rooms',
-        filter: `id=eq.${params.id}`,
       }, (payload) => {
         const updatedRoom = payload.new as Room
         setRoom(updatedRoom)

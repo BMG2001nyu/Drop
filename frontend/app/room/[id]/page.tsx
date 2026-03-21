@@ -96,13 +96,11 @@ export default function RoomPage({ params }: Props) {
         event: '*',
         schema: 'public',
         table: 'players',
-        filter: `room_id=eq.${params.id}`,
       }, () => fetchData())
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'rooms',
-        filter: `id=eq.${params.id}`,
       }, (payload) => {
         const updatedRoom = payload.new as Room
         setRoom(updatedRoom)

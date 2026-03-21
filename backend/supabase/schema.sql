@@ -33,6 +33,10 @@ alter table players disable row level security;
 alter publication supabase_realtime add table rooms;
 alter publication supabase_realtime add table players;
 
+-- Required for realtime filters on non-primary-key columns
+alter table rooms replica identity full;
+alter table players replica identity full;
+
 -- Indexes
 create index if not exists players_room_id_idx on players(room_id);
 create index if not exists rooms_status_idx on rooms(status);
