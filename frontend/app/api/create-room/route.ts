@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { generateRoomCode } from '@/lib/room-codes'
 
@@ -10,6 +11,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Decision is required' }, { status: 400 })
     }
 
+    // Attach host_id if user is signed in (optional — app works without auth)
+    const { userId } = await auth()
+
     const supabase = createServerClient()
     const roomId = generateRoomCode()
 
@@ -20,6 +24,7 @@ export async function POST(req: Request) {
         decision: decision.trim(),
         location: location?.trim() || null,
         status: 'waiting',
+        host_id: userId ?? null,
       })
 
     if (error) throw error

@@ -2,9 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
+import Link from 'next/link'
 
 export default function HomeForm() {
   const router = useRouter()
+  const { isSignedIn } = useAuth()
   const [decision, setDecision] = useState('')
   const [location, setLocation] = useState('')
   const [loading, setLoading] = useState(false)
@@ -27,8 +30,9 @@ export default function HomeForm() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create room')
       router.push(`/room/${data.roomId}`)
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Try again.')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Something went wrong. Try again.'
+      setError(message)
       setLoading(false)
     }
   }
@@ -85,7 +89,18 @@ export default function HomeForm() {
       </button>
 
       <p className="text-center text-white/30 text-sm">
-        No signup needed · Share a QR code · Done in 90 seconds
+        {isSignedIn ? (
+          <>
+            No signup needed · Share a QR code ·{' '}
+            <Link href="/dashboard" className="text-[#FF5C00] hover:text-[#FF8C00] transition-colors">
+              View past Drops
+            </Link>
+          </>
+        ) : (
+          <>
+            No signup needed · Share a QR code · Done in 90 seconds
+          </>
+        )}
       </p>
     </form>
   )
