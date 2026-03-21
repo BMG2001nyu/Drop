@@ -27,6 +27,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ roomId })
   } catch (err) {
     console.error('Create room error:', err)
-    return NextResponse.json({ error: 'Failed to create room' }, { status: 500 })
+    const isPlaceholder = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder')
+    const message = isPlaceholder
+      ? 'Supabase not configured — add real keys to .env.local'
+      : 'Failed to create room'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -72,8 +72,8 @@ export default function RoomPage({ params }: Props) {
   const handleStartDrop = async () => {
     if (!room) return
 
-    // Announce the challenge via ElevenLabs
-    await playAudio(`Your group needs to decide: ${room.decision}. Each person will have 15 seconds to speak their role.`, 'challenge')
+    // Fire audio without awaiting — don't block speaking round on ElevenLabs
+    playAudio(`Your group needs to decide: ${room.decision}. Each person will have 15 seconds to speak their role.`, 'challenge')
 
     await fetch('/api/start-speaking', {
       method: 'POST',

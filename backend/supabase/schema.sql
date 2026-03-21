@@ -25,6 +25,10 @@ create table if not exists players (
   joined_at timestamptz default now()
 );
 
+-- Disable RLS (no auth needed — this is zero-friction, public access)
+alter table rooms disable row level security;
+alter table players disable row level security;
+
 -- Enable Realtime on both tables
 alter publication supabase_realtime add table rooms;
 alter publication supabase_realtime add table players;

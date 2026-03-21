@@ -14,6 +14,9 @@ const config: Config = {
           600: '#FF8C00',
         },
       },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+      },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'flip': 'flip 0.6s ease-in-out',

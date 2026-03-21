@@ -45,6 +45,10 @@ export async function POST(req: Request) {
     const availableRoles = allRoles.filter(r => !usedRoles.has(r.id))
     const assignedRole = availableRoles[0]
 
+    if (!assignedRole) {
+      return NextResponse.json({ error: 'No roles available' }, { status: 400 })
+    }
+
     // Create player
     const { data: player, error } = await supabase
       .from('players')

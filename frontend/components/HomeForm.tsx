@@ -24,11 +24,11 @@ export default function HomeForm() {
         body: JSON.stringify({ decision: decision.trim(), location: location.trim() || null }),
       })
 
-      if (!res.ok) throw new Error('Failed to create room')
-      const { roomId } = await res.json()
-      router.push(`/room/${roomId}`)
-    } catch (err) {
-      setError('Something went wrong. Try again.')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to create room')
+      router.push(`/room/${data.roomId}`)
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Try again.')
       setLoading(false)
     }
   }
@@ -44,7 +44,7 @@ export default function HomeForm() {
           onChange={e => setDecision(e.target.value)}
           placeholder="Where should we eat tonight?"
           rows={3}
-          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-xl placeholder-white/20 focus:outline-none focus:border-[#FF5C00] focus:bg-white/8 resize-none transition-all duration-200"
+          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-xl placeholder-white/20 focus:outline-none focus:border-[#FF5C00] focus:bg-white/10 resize-none transition-all duration-200"
           required
         />
       </div>
@@ -58,7 +58,7 @@ export default function HomeForm() {
           value={location}
           onChange={e => setLocation(e.target.value)}
           placeholder="Lower East Side, NYC"
-          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-lg placeholder-white/20 focus:outline-none focus:border-[#FF5C00] focus:bg-white/8 transition-all duration-200"
+          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-lg placeholder-white/20 focus:outline-none focus:border-[#FF5C00] focus:bg-white/10 transition-all duration-200"
         />
       </div>
 
