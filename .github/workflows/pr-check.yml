@@ -36,6 +36,12 @@ jobs:
           GEMINI_API_KEY=placeholder_gemini_key
           ELEVENLABS_API_KEY=placeholder_elevenlabs_key
           ELEVENLABS_VOICE_ID=placeholder_voice_id
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_placeholder
+          CLERK_SECRET_KEY=sk_test_placeholder
+          NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+          NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+          NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+          NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
           EOF
 
       - name: Lint
@@ -53,6 +59,8 @@ jobs:
           GEMINI_API_KEY: placeholder_gemini_key
           ELEVENLABS_API_KEY: placeholder_elevenlabs_key
           ELEVENLABS_VOICE_ID: placeholder_voice_id
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_placeholder
+          CLERK_SECRET_KEY: sk_test_placeholder
 
       - name: Check for .env.local in diff
         run: |
