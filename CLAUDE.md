@@ -5,9 +5,32 @@
 
 ## What Is Drop?
 
-Drop is a real-time group decision app. When a group can't decide on something — where to eat, what to do — Drop assigns everyone a role, collects their 15-second voice input, then uses Gemini to stream live reasoning before delivering one final confident decision.
+Drop is a real-time group decision app. When a group can't decide — where to eat, what to do — Drop assigns everyone a role, collects their 15-second voice input, then uses Gemini to stream live reasoning before delivering one final confident decision.
 
 **Tagline:** "Stop Debating. Start Deciding."
+
+---
+
+## Build Progress (Milestones)
+
+Work through `task.md` milestone by milestone. Each milestone has a clear test — don't move to the next one until the current test passes.
+
+| # | Milestone | Key Test |
+|---|-----------|---------|
+| 0 | App boots locally | Homepage renders at `localhost:3000` |
+| 1 | Room creation | Row appears in Supabase `rooms` table |
+| 2 | Host screen renders | QR code visible, 6 empty role slots shown |
+| 3 | Player joins + gets role | Row in `players` table with correct role |
+| 4 | Realtime role cards | Cards flip on big screen without refresh |
+| 5 | Speaking round starts | Room status → `speaking`, correct player highlighted |
+| 6 | Voice capture + transcript | `transcript` + `has_spoken` saved in Supabase |
+| 7 | Gemini streams live | Reasoning references real player words, `DECISION:` appears |
+| 8 | Decision reveal + card | `/card/[id]` loads for anyone with the link |
+| 9 | ElevenLabs audio | Challenge + decision read aloud; app works without it too |
+| 10 | Deploy to Vercel | Full flow works on production URL, real phones |
+| 11 | Demo rehearsal | 3 clean runs, no crashes |
+
+---
 
 ## Tech Stack
 
@@ -19,73 +42,67 @@ Drop is a real-time group decision app. When a group can't decide on something �
 | Database + Realtime | Supabase | Room sync across devices |
 | Voice Input | Web Speech API | Zero-setup mobile voice |
 | Voice Output | ElevenLabs | Reads challenge + decision |
-| Auth (optional) | Clerk | Host dashboard only |
+| Auth (optional) | Clerk | Host dashboard — add after M10 |
 | Styling | Tailwind CSS | Dark, high-contrast UI |
 
-## Design System
-
-```
-Background:    #0a0a0a  (near black)
-Surface:       #111111  (cards)
-Surface-2:     #1a1a1a  (elevated)
-Accent:        #FF5C00  (electric orange)
-Accent-light:  #FF8C00  (orange hover)
-Text:          #ffffff
-Text-muted:    #666666
-```
-
-**Big screen rule:** All text must be readable from 10 feet.
-**Mobile rule:** All tap targets minimum 48px height.
+---
 
 ## Project Structure
 
 ```
-/app
-  page.tsx                    <- Home: "Start a Drop"
-  room/[id]/page.tsx          <- Host big screen view
-  join/[id]/page.tsx          <- Mobile join + speak view
-  card/[id]/page.tsx          <- Shareable Decision Card
-  api/
-    create-room/route.ts      <- POST: create new room
-    join-room/route.ts        <- POST: player joins, gets role
-    submit-transcript/route.ts <- POST: save voice transcript
-    start-speaking/route.ts   <- POST: begin speaking round
-    start-reasoning/route.ts  <- POST: stream Gemini reasoning
-    speak-decision/route.ts   <- POST: ElevenLabs TTS
-
-/components
-  HomeForm.tsx                <- Decision input form
-  QRDisplay.tsx               <- QR code + room code
-  PlayerGrid.tsx              <- 6 role slots real-time
-  RoleCard.tsx                <- Animated role card
-  SpeakingView.tsx            <- Mobile voice interface
-  ReasoningStream.tsx         <- Live Gemini text stream
-  DecisionReveal.tsx          <- Final answer animation
-  DecisionCard.tsx            <- Shareable output card
-
-/lib
-  supabase.ts                 <- Browser Supabase client
-  supabase-server.ts          <- Server Supabase client (service role)
-  roles.ts                    <- 6 role definitions + assignment
-  room-codes.ts               <- Human-readable room code generator
-  gemini.ts                   <- Reasoning prompt builder
-
-/supabase
-  schema.sql                  <- Run this in Supabase SQL editor
+Drop/
+├── frontend/                         ← Deploy this to Vercel
+│   ├── app/
+│   │   ├── page.tsx                  ← Home: "Start a Drop"
+│   │   ├── room/[id]/page.tsx        ← Host big screen
+│   │   ├── join/[id]/page.tsx        ← Mobile join + speak
+│   │   ├── card/[id]/page.tsx        ← Shareable Decision Card
+│   │   └── api/
+│   │       ├── create-room/          ← POST: create room
+│   │       ├── join-room/            ← POST: player joins, gets role
+│   │       ├── start-speaking/       ← POST: begin speaking round
+│   │       ├── submit-transcript/    ← POST: save voice transcript
+│   │       ├── start-reasoning/      ← POST: stream Gemini
+│   │       └── speak-decision/       ← POST: ElevenLabs TTS
+│   ├── components/
+│   │   ├── HomeForm.tsx
+│   │   ├── QRDisplay.tsx
+│   │   ├── PlayerGrid.tsx
+│   │   ├── RoleCard.tsx
+│   │   ├── SpeakingView.tsx
+│   │   ├── ReasoningStream.tsx
+│   │   ├── DecisionReveal.tsx
+│   │   └── DecisionCard.tsx
+│   ├── lib/
+│   │   ├── supabase.ts               ← Browser client
+│   │   ├── supabase-server.ts        ← Server client (service role)
+│   │   ├── roles.ts                  ← 6 role definitions
+│   │   ├── room-codes.ts             ← Room code generator
+│   │   └── gemini.ts                 ← Reasoning prompt builder
+│   ├── .env.local                    ← Your keys (never commit)
+│   └── .env.local.example            ← Template
+│
+└── backend/
+    └── supabase/
+        └── schema.sql                ← Run in Supabase SQL Editor
 ```
+
+---
 
 ## Room Status Machine
 
 ```
-waiting -> speaking -> reasoning -> done
+waiting → speaking → reasoning → done
 ```
 
-| Status | Trigger | Big Screen Shows |
-|--------|---------|-----------------|
-| `waiting` | Room created | QR code + role cards filling |
-| `speaking` | Host clicks "Start Drop" | Current speaker highlighted, timer |
-| `reasoning` | All players submitted transcripts | Gemini stream live |
-| `done` | Gemini finishes + saves decision | Final decision + card link |
+| Status | Triggered by | Big Screen | Mobile |
+|--------|-------------|-----------|--------|
+| `waiting` | Room created | QR + empty role slots | Name entry → role reveal → waiting |
+| `speaking` | Host clicks "Start Drop" | Current speaker highlighted + timer | "YOUR TURN" or "Waiting..." |
+| `reasoning` | All transcripts submitted | Gemini streaming text | "Drop is listening..." |
+| `done` | Gemini finishes | Decision reveal + card link | Decision + "Start New Drop" |
+
+---
 
 ## The 6 Roles
 
@@ -98,84 +115,102 @@ waiting -> speaking -> reasoning -> done
 | The Mediator | ⚖️ | Middle ground between conflicts |
 | The Closer | 🎯 | Final energy and commitment check |
 
-With fewer than 6 players, roles are assigned from the top and extras are skipped.
+With fewer than 6 players, roles fill from the top — skip from the bottom.
+
+---
+
+## Design System
+
+```
+Background:    #0a0a0a  (near black)
+Surface:       #111111  (cards)
+Accent:        #FF5C00  (electric orange)
+Accent-light:  #FF8C00  (hover)
+Text:          #ffffff
+Text-muted:    #666666
+```
+
+- Big screen: all text readable from 10 feet away
+- Mobile: all tap targets minimum 48px
+
+---
 
 ## Environment Variables
 
 ```bash
-# Required
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-GEMINI_API_KEY=
-ELEVENLABS_API_KEY=
-ELEVENLABS_VOICE_ID=
+# ── Required for Milestones 1–8 ──────────────────────
+NEXT_PUBLIC_SUPABASE_URL=          # Supabase project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=     # Supabase anon/public key
+SUPABASE_SERVICE_ROLE_KEY=         # Supabase service role key (server only)
+GEMINI_API_KEY=                    # Google AI Studio
 
-# Optional (Clerk for host dashboard)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
+# ── Required for Milestone 9 ─────────────────────────
+ELEVENLABS_API_KEY=                # ElevenLabs account key
+ELEVENLABS_VOICE_ID=               # Voice ID from ElevenLabs library
+
+# ── Optional — add after Milestone 10 ────────────────
+# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+# CLERK_SECRET_KEY=
 ```
+
+---
 
 ## Quick Start
 
 ```bash
-# 1. Install dependencies
+cd frontend
 npm install
-
-# 2. Set up environment variables
-cp .env.local.example .env.local
-# Fill in all values
-
-# 3. Set up Supabase
-# Go to Supabase SQL editor and run: supabase/schema.sql
-
-# 4. Run dev server
+cp .env.local.example .env.local   # then fill in real keys
 npm run dev
 ```
+
+---
 
 ## Key Implementation Notes
 
 ### Supabase Realtime
-Both `rooms` and `players` tables have realtime enabled. The big screen subscribes to both. Mobile subscribes to `rooms` only (to detect when it's their turn).
+Both `rooms` and `players` have realtime enabled. Big screen subscribes to both tables. Mobile subscribes to `rooms` only (detects when it's their turn via `current_speaker_role`).
 
 ### Gemini Streaming
-The `/api/start-reasoning` route streams directly from Gemini to the client. The big screen reads the stream. The final DECISION and BECAUSE lines are parsed and saved to Supabase at stream end.
+`/api/start-reasoning` streams directly from Gemini → client. Text accumulates in `ReasoningStream`. At stream end, `DECISION:` and `BECAUSE:` are parsed with regex and saved to `rooms`.
 
 ### Voice Capture
-Uses `window.SpeechRecognition` (browser native). Mobile Chrome works. Safari has `webkitSpeechRecognition`. Hard-stops at 15 seconds. Falls back to "I'm not sure, whatever the group wants." if nothing captured.
+`window.SpeechRecognition` / `webkitSpeechRecognition`. Hard-stops at 15 seconds. Falls back to `"I'm not sure, whatever the group wants."` if nothing captured. Works on mobile Chrome; limited on Safari.
 
 ### ElevenLabs TTS
-Called server-side at two moments:
-1. When the speaking round starts (reads the challenge aloud)
-2. When the final decision is revealed (reads decision + reason)
+Two calls: (1) when speaking round starts, reads the challenge question; (2) when final decision is revealed. Runs server-side. App is fully functional without it — audio is enhancement only.
 
-### Clerk Auth
-Used ONLY for the optional `/dashboard` route where hosts can see their past drops. The main Drop flow (create/join/speak/decide) requires zero authentication.
+### Clerk (Not Active in Local Dev)
+Middleware is a no-op locally. Add real Clerk keys + re-enable `ClerkProvider` in `layout.tsx` after Milestone 10 to unlock the `/dashboard` route.
 
-## Demo Flow (3 minutes)
+---
 
-1. **0:00-0:15** — Show QR on big screen, judges scan
-2. **0:15-0:30** — Watch role cards flip as judges join
-3. **0:30-0:45** — ElevenLabs reads the challenge aloud
-4. **0:45-1:45** — Each judge speaks (15s each), transcripts appear live
-5. **1:45-2:30** — Gemini reasoning streams on big screen, reference roles live
-6. **2:30-2:50** — Final decision drops, ElevenLabs reads it
-7. **2:50-3:00** — Show Decision Card, shareable link
+## Vercel Deployment (Milestone 10)
+
+1. Push to GitHub
+2. Connect repo in Vercel
+3. Set **Root Directory** to `frontend/`
+4. Add all env vars in Vercel project settings
+5. Deploy
+
+---
 
 ## Contingency Plans
 
 | Risk | Fix |
 |------|-----|
-| Web Speech API fails | Have judge type instead |
-| Gemini is slow | "Thinking" animation fills the time |
-| ElevenLabs fails | Skip audio, visuals carry the demo |
-| Supabase realtime lags | Manual refresh button as backup |
-| Judge's phone won't load | Pre-open on a spare phone |
+| Web Speech API fails | Have player type instead — same `/api/submit-transcript` |
+| Gemini is slow | Pulse animation fills the time — silence is dramatic |
+| ElevenLabs fails | App continues without audio silently |
+| Supabase realtime lags | Add a manual "Refresh" button as backup |
+| Judge's phone won't load | Pre-open join URL on a spare phone |
+
+---
 
 ## Why This Wins
 
-- **Live Demo (45%):** Judges ARE the demo. Their voices build it. Unrepeatable.
-- **Creativity (35%):** Voice -> live AI reasoning -> confident group decision. Not a chatbot. Not RAG.
+- **Live Demo (45%):** Judges ARE the demo. Their voices build it. Completely unrepeatable.
+- **Creativity (35%):** Role-based voice input → live AI reasoning → one confident decision. Not a chatbot. Not RAG.
 - **Impact (20%):** Every person with friends faces group decision paralysis daily.
 
 Built on Vercel | Uses Gemini | Multimodal voice | Real consumer problem
