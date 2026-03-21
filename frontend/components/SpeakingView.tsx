@@ -11,7 +11,7 @@ interface Props {
 
 const SPEAKING_TIME = 15
 
-export default function SpeakingView({ role, playerName: _playerName, onSubmit }: Props) {
+export default function SpeakingView({ role, playerName, onSubmit }: Props) {
   const [timeLeft, setTimeLeft] = useState(SPEAKING_TIME)
   const [isListening, setIsListening] = useState(false)
   const [liveTranscript, setLiveTranscript] = useState('')
@@ -107,7 +107,7 @@ export default function SpeakingView({ role, playerName: _playerName, onSubmit }
   return (
     <div className="w-full max-w-sm text-center">
       <div className="bg-[#FF5C00]/10 border border-[#FF5C00]/30 rounded-3xl p-6 mb-6">
-        <p className="text-[#FF5C00] text-sm font-bold uppercase tracking-widest mb-1">YOUR TURN</p>
+        <p className="text-[#FF5C00] text-sm font-bold uppercase tracking-widest mb-1">YOUR TURN — {playerName}</p>
         <p className="text-white font-black text-2xl">{role.emoji} {role.label}</p>
       </div>
 
