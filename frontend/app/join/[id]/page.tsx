@@ -336,6 +336,7 @@ export default function JoinPage({ params }: Props) {
         reason={room.final_reason || ''}
         roomId={params.id}
         players={allPlayers}
+        reasoning={room.reasoning_stream || ''}
       />
     )
   }

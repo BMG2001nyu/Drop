@@ -9,12 +9,16 @@ interface Props {
   reason: string
   roomId: string
   players: Player[]
+  reasoning?: string
+  verificationStatus?: string | null
+  verificationMessage?: string | null
 }
 
-export default function DecisionReveal({ decision, reason, roomId, players }: Props) {
+export default function DecisionReveal({ decision, reason, roomId, players, reasoning, verificationStatus, verificationMessage }: Props) {
   const [phase, setPhase] = useState<'black' | 'flash' | 'blast' | 'full'>('black')
   const [imageData, setImageData] = useState<{ base64: string; mime: string } | null>(null)
   const [imageLoading, setImageLoading] = useState(true)
+  const [showReasoningModal, setShowReasoningModal] = useState(false)
 
   // Sequence: black → flash → blast (text + shockwave) → full (image + details)
   useEffect(() => {
@@ -129,15 +133,90 @@ export default function DecisionReveal({ decision, reason, roomId, players }: Pr
 
           {/* CTA Button */}
           {phase === 'full' && (
-            <div className="btn-enter" style={{ animationDelay: '0.8s' }}>
+            <div className="btn-enter flex flex-col items-center gap-4" style={{ animationDelay: '0.8s' }}>
               <Link
                 href={`/card/${roomId}`}
                 className="inline-block bg-[#FF5C00] hover:bg-[#FF8C00] text-white text-xl font-bold px-10 py-5 rounded-2xl transition-all duration-200 orange-glow hover:scale-[1.02] active:scale-[0.98]"
               >
                 See Decision Card →
               </Link>
+              {reasoning && (
+                <button
+                  onClick={() => setShowReasoningModal(true)}
+                  className="text-white/40 hover:text-white/80 text-sm underline underline-offset-4 transition-colors duration-200"
+                >
+                  Why did Drop decide this?
+                </button>
+              )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Reasoning Modal */}
+      {showReasoningModal && reasoning && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4"
+          onClick={() => setShowReasoningModal(false)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+          {/* Sheet */}
+          <div
+            className="relative z-10 w-full max-w-2xl bg-[#111111] border border-white/10 rounded-3xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+              <div>
+                <p className="text-[#FF5C00] text-xs uppercase tracking-widest font-bold mb-1">Drop&apos;s Reasoning</p>
+                <p className="text-white font-black text-lg">Why {decision}</p>
+              </div>
+              <button
+                onClick={() => setShowReasoningModal(false)}
+                className="text-white/30 hover:text-white transition-colors text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Reasoning thoughts */}
+            <div className="px-6 py-5 max-h-[60vh] overflow-y-auto space-y-3">
+              {reasoning.split('\n').filter(l => l.trim()).map((line, i) => {
+                const isDecision = /^DECISION:/i.test(line.trim())
+                const isBecause = /^BECAUSE:/i.test(line.trim())
+                if (isDecision) return (
+                  <div key={i} className="pt-3 border-t border-white/10">
+                    <p className="text-[#FF5C00] font-black text-lg leading-snug">
+                      {line.replace(/^DECISION:\s*/i, '')}
+                    </p>
+                  </div>
+                )
+                if (isBecause) return (
+                  <p key={i} className="text-white/50 text-sm italic leading-relaxed">
+                    {line.replace(/^BECAUSE:\s*/i, '')}
+                  </p>
+                )
+                return (
+                  <div key={i} className="flex gap-3">
+                    <span className="text-[#FF5C00]/40 text-xs mt-1 shrink-0">{i + 1}</span>
+                    <p className="text-white/80 text-sm leading-relaxed">{line.trim()}</p>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-white/10">
+              <button
+                onClick={() => setShowReasoningModal(false)}
+                className="w-full bg-white/5 hover:bg-white/10 text-white/60 font-semibold py-3 rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
