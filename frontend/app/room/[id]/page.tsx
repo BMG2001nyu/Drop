@@ -11,6 +11,14 @@ interface Props {
   params: { id: string }
 }
 
+interface HostPlayer {
+  id: string
+  name: string
+  role: string
+  roleLabel: string
+  roleEmoji: string
+}
+
 async function playAudio(text: string, type: 'challenge' | 'decision') {
   try {
     const res = await fetch('/api/speak-decision', {
@@ -36,6 +44,15 @@ export default function RoomPage({ params }: Props) {
   const hasAnnouncedDecision = useRef(false)
   const reasoningStarted = useRef(false)
 
+  // Host auto-join state
+  const [hostJoinState, setHostJoinState] = useState<'prompt' | 'joined'>('prompt')
+  const [hostPlayer, setHostPlayer] = useState<HostPlayer | null>(null)
+  const [hostName, setHostName] = useState('')
+  const [hostJoining, setHostJoining] = useState(false)
+
+  // Auto-detected location state
+  const [resolvedLocation, setResolvedLocation] = useState<string | null>(null)
+
   const fetchData = useCallback(async () => {
     const [{ data: roomData }, { data: playersData }] = await Promise.all([
       supabase.from('rooms').select('*').eq('id', params.id).single(),
@@ -46,6 +63,43 @@ export default function RoomPage({ params }: Props) {
     setLoading(false)
     return roomData as Room | null
   }, [params.id])
+
+  const tryAutoLocation = useCallback(async (roomId: string) => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { 'User-Agent': 'Drop-App/1.0' } }
+          )
+          const data = await res.json()
+          // Extract neighborhood + city from Nominatim response
+          const addr = data.address
+          const parts = [
+            addr.neighbourhood || addr.suburb || addr.quarter,
+            addr.city || addr.town || addr.village,
+            addr.state,
+          ].filter(Boolean)
+          const locationStr = parts.slice(0, 2).join(', ')
+          if (locationStr) {
+            setResolvedLocation(locationStr)
+            // Save to Supabase
+            await fetch('/api/update-location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ roomId, location: locationStr }),
+            })
+            // Update local room state
+            setRoom(prev => prev ? { ...prev, location: locationStr } : prev)
+          }
+        } catch { /* silently fail */ }
+      },
+      () => { /* permission denied — silently continue */ },
+      { timeout: 8000 }
+    )
+  }, [])
 
   const handleStartReasoning = useCallback(async () => {
     if (reasoningStarted.current) return
@@ -83,10 +137,57 @@ export default function RoomPage({ params }: Props) {
     })
   }
 
+  const handleHostJoin = async () => {
+    if (!hostName.trim() || !room) return
+    setHostJoining(true)
+    try {
+      const res = await fetch('/api/join-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: room.id, playerName: hostName.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const hp: HostPlayer = {
+        id: data.player.id,
+        name: data.player.name,
+        role: data.player.role,
+        roleLabel: data.player.role_label,
+        roleEmoji: data.player.role_emoji,
+      }
+      setHostPlayer(hp)
+      setHostJoinState('joined')
+      localStorage.setItem(`drop_host_${room.id}`, JSON.stringify(hp))
+      fetchData()
+    } catch (err) {
+      console.error('Host join failed:', err)
+    } finally {
+      setHostJoining(false)
+    }
+  }
+
   useEffect(() => {
     fetchData().then((initialRoom) => {
       if (initialRoom?.status === 'reasoning' && !reasoningStarted.current) {
         handleStartReasoning()
+      }
+
+      // Auto-detect location if not already set
+      if (!initialRoom?.location && initialRoom?.status === 'waiting') {
+        tryAutoLocation(initialRoom.id)
+      }
+
+      // Restore host join state from localStorage
+      if (initialRoom) {
+        const saved = localStorage.getItem(`drop_host_${initialRoom.id}`)
+        if (saved) {
+          try {
+            setHostPlayer(JSON.parse(saved) as HostPlayer)
+            setHostJoinState('joined')
+          } catch {
+            // Ignore malformed localStorage data
+          }
+        }
       }
     })
 
@@ -128,7 +229,7 @@ export default function RoomPage({ params }: Props) {
       clearInterval(pollInterval)
       supabase.removeChannel(channel)
     }
-  }, [params.id, fetchData, handleStartReasoning])
+  }, [params.id, fetchData, handleStartReasoning, tryAutoLocation])
 
   if (loading) {
     return (
@@ -154,8 +255,11 @@ export default function RoomPage({ params }: Props) {
         <div className="text-center">
           <p className="text-white/40 text-sm uppercase tracking-widest">The Question</p>
           <p className="text-white text-xl font-bold max-w-lg">{room.decision}</p>
-          {room.location && (
-            <p className="text-white/40 text-sm">📍 {room.location}</p>
+          {(room.location || resolvedLocation) && (
+            <p className="text-white/40 text-sm">
+              📍 {room.location || resolvedLocation}
+              {resolvedLocation && !room.location && <span className="text-[#FF5C00]/60 text-xs ml-1">(auto)</span>}
+            </p>
           )}
         </div>
         <div className="text-right">
@@ -182,6 +286,38 @@ export default function RoomPage({ params }: Props) {
           <div className="w-full max-w-6xl">
             <div className="grid grid-cols-2 gap-12 items-start">
               <div>
+                {/* Host join prompt — shown until host joins */}
+                {hostJoinState === 'prompt' && (
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+                    <p className="text-white/50 text-xs uppercase tracking-widest mb-2">You&apos;re the host — join first</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={hostName}
+                        onChange={e => setHostName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleHostJoin()}
+                        placeholder="Your name"
+                        className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#FF5C00]"
+                      />
+                      <button
+                        onClick={handleHostJoin}
+                        disabled={!hostName.trim() || hostJoining}
+                        className="bg-[#FF5C00] hover:bg-[#FF8C00] disabled:bg-white/10 text-white text-sm font-bold px-4 py-2 rounded-xl transition-all"
+                      >
+                        {hostJoining ? '...' : 'Join →'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show host's role once joined */}
+                {hostJoinState === 'joined' && hostPlayer && (
+                  <div className="bg-[#FF5C00]/10 border border-[#FF5C00]/30 rounded-2xl p-4 mb-4">
+                    <p className="text-[#FF5C00] text-xs uppercase tracking-widest mb-1">You&apos;re in as Host</p>
+                    <p className="text-white font-bold">{hostPlayer.roleEmoji} {hostPlayer.name} · {hostPlayer.roleLabel}</p>
+                  </div>
+                )}
+
                 <QRDisplay roomId={room.id} />
               </div>
               <div>
