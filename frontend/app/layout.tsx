@@ -22,28 +22,30 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider
-      appearance={{
-        variables: {
-          colorPrimary: '#FF5C00',
-          colorBackground: '#111111',
-          colorInputBackground: '#1a1a1a',
-          colorText: '#ffffff',
-          colorTextSecondary: '#666666',
-          borderRadius: '12px',
-          fontFamily: 'Inter, sans-serif',
-        },
-        elements: {
-          card: 'bg-[#111111] border border-white/10',
-          headerTitle: 'text-white font-black',
-          formButtonPrimary: 'bg-[#FF5C00] hover:bg-[#FF8C00]',
-          footerActionLink: 'text-[#FF5C00] hover:text-[#FF8C00]',
-        },
-      }}
-    >
-      <html lang="en">
-        <body className={inter.className}>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body className={inter.className}>
+        <ClerkProvider
+          appearance={{
+            variables: {
+              colorPrimary: '#FF5C00',
+              colorBackground: '#111111',
+              colorInputBackground: '#1a1a1a',
+              colorText: '#ffffff',
+              colorTextSecondary: '#666666',
+              borderRadius: '12px',
+              fontFamily: 'Inter, sans-serif',
+            },
+            elements: {
+              card: 'bg-[#111111] border border-white/10',
+              headerTitle: 'text-white font-black',
+              formButtonPrimary: 'bg-[#FF5C00] hover:bg-[#FF8C00]',
+              footerActionLink: 'text-[#FF5C00] hover:text-[#FF8C00]',
+            },
+          }}
+        >
+          {children}
+        </ClerkProvider>
+      </body>
+    </html>
   )
 }
