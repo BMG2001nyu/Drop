@@ -79,30 +79,36 @@ export default function JoinPage({ params }: Props) {
   useEffect(() => {
     if (!player || !room) return
 
+    const handleRoomUpdate = (updatedRoom: Room) => {
+      setRoom(updatedRoom)
+      if (updatedRoom.status === 'speaking' && updatedRoom.current_speaker_role === player.role) {
+        setState('my-turn')
+      }
+      if (updatedRoom.status === 'done') {
+        setState('done')
+      }
+    }
+
+    // Poll every 2s as reliable backup to realtime
+    const pollInterval = setInterval(async () => {
+      const { data } = await supabase.from('rooms').select('*').eq('id', params.id).single()
+      if (data) handleRoomUpdate(data as Room)
+    }, 2000)
+
     const channel = supabase
       .channel(`join:${params.id}:${player.id}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'rooms',
-      }, (payload) => {
-        const updatedRoom = payload.new as Room
-        setRoom(updatedRoom)
-
-        if (updatedRoom.status === 'speaking') {
-          if (updatedRoom.current_speaker_role === player.role) {
-            setState('my-turn')
-          }
-        }
-
-        if (updatedRoom.status === 'done') {
-          setState('done')
-        }
-      })
+      }, (payload) => handleRoomUpdate(payload.new as Room))
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
-  }, [player, room, params.id])
+    return () => {
+      clearInterval(pollInterval)
+      supabase.removeChannel(channel)
+    }
+  }, [player, params.id])
 
   // Check if it's this player's turn
   useEffect(() => {

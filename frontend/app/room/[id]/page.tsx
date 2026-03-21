@@ -90,6 +90,9 @@ export default function RoomPage({ params }: Props) {
       }
     })
 
+    // Poll every 2s as a reliable backup to realtime
+    const pollInterval = setInterval(() => fetchData(), 2000)
+
     const channel = supabase
       .channel(`room:${params.id}`)
       .on('postgres_changes', {
@@ -121,7 +124,10 @@ export default function RoomPage({ params }: Props) {
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      clearInterval(pollInterval)
+      supabase.removeChannel(channel)
+    }
   }, [params.id, fetchData, handleStartReasoning])
 
   if (loading) {
