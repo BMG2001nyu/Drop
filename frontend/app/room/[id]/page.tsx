@@ -69,7 +69,11 @@ export default function RoomPage({ params }: Props) {
       const chunk = decoder.decode(value)
       setReasoningText(prev => prev + chunk)
     }
-  }, [params.id])
+
+    // Stream is done — server has already updated status to 'done' in Supabase.
+    // Fetch immediately instead of waiting up to 2s for the polling interval.
+    await fetchData()
+  }, [params.id, fetchData])
 
   const handleThoughtComplete = useCallback((thought: string, index: number) => {
     // Fire voice at the 3rd completed thought (midpoint of 6-10 step reasoning)
