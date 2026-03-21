@@ -46,6 +46,7 @@ export default function RoomPage({ params }: Props) {
   const hasAnnouncedDecision = useRef(false)
   const reasoningStarted = useRef(false)
   const hasAnnouncedMidpoint = useRef(false)
+  const hasPlayedInstructions = useRef(false)
 
   // Host auto-join state
   const [hostJoinState, setHostJoinState] = useState<'prompt' | 'joined' | 'pick-role'>('prompt')
@@ -54,6 +55,7 @@ export default function RoomPage({ params }: Props) {
   const [hostJoining, setHostJoining] = useState(false)
   const [hostAvailableRoles, setHostAvailableRoles] = useState<Role[]>([])
   const [hostHasSpoken, setHostHasSpoken] = useState(false)
+  const [hostSpeakingPhase, setHostSpeakingPhase] = useState<'instructions' | 'overview' | 'my-turn'>('instructions')
 
   // Auto-detected location state
   const [resolvedLocation, setResolvedLocation] = useState<string | null>(null)
@@ -144,9 +146,6 @@ export default function RoomPage({ params }: Props) {
   const handleStartDrop = async () => {
     if (!room) return
 
-    // Fire audio without awaiting — don't block speaking round on ElevenLabs
-    playAudio(`Your group needs to decide: ${room.decision}. Each person will have 15 seconds to speak their role.`, 'challenge')
-
     await fetch('/api/start-speaking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -231,7 +230,51 @@ export default function RoomPage({ params }: Props) {
       body: JSON.stringify({ playerId: hostPlayer.id, transcript, roomId: room.id }),
     })
     setHostHasSpoken(true)
+    setHostSpeakingPhase('overview')
   }
+
+  // Sync hostHasSpoken from players data (handles page refresh)
+  useEffect(() => {
+    if (hostPlayer && players.length > 0) {
+      const p = players.find(pl => pl.id === hostPlayer.id)
+      if (p?.has_spoken && !hostHasSpoken) {
+        setHostHasSpoken(true)
+        setHostSpeakingPhase('overview')
+      }
+    }
+  }, [players, hostPlayer, hostHasSpoken])
+
+  // Play ElevenLabs audio when instructions screen appears
+  useEffect(() => {
+    if (
+      room?.status === 'speaking' &&
+      hostSpeakingPhase === 'instructions' &&
+      hostPlayer &&
+      !hasPlayedInstructions.current
+    ) {
+      hasPlayedInstructions.current = true
+      const hostRole = ROLES.find(r => r.id === hostPlayer.role)
+      if (hostRole) {
+        playAudio(
+          `The drop has started. Your group needs to decide: ${room.decision}. You are ${hostRole.label}. ${hostRole.prompt} You have 15 seconds when it's your turn.`,
+          'challenge'
+        )
+      }
+    }
+  }, [room?.status, room?.decision, hostSpeakingPhase, hostPlayer])
+
+  // Auto-transition from overview to my-turn when it's the host's turn
+  useEffect(() => {
+    if (
+      room?.status === 'speaking' &&
+      hostSpeakingPhase === 'overview' &&
+      hostPlayer &&
+      room.current_speaker_role === hostPlayer.role &&
+      !hostHasSpoken
+    ) {
+      setHostSpeakingPhase('my-turn')
+    }
+  }, [room?.status, room?.current_speaker_role, hostSpeakingPhase, hostPlayer, hostHasSpoken])
 
   useEffect(() => {
     fetchData().then((initialRoom) => {
@@ -449,48 +492,85 @@ export default function RoomPage({ params }: Props) {
         )}
 
         {/* STATE B: Speaking */}
-        {room.status === 'speaking' && (() => {
-          const isHostTurn = hostPlayer && room.current_speaker_role === hostPlayer.role && !hostHasSpoken
-          const hostRole = hostPlayer ? ROLES.find(r => r.id === hostPlayer.role) : null
-          return (
-            <div className="w-full max-w-4xl">
-              {/* Host's speaking turn — show full SpeakingView */}
-              {isHostTurn && hostRole ? (
-                <div>
-                  <p className="text-center text-white/40 text-sm uppercase tracking-widest mb-6">Your turn to speak</p>
-                  <SpeakingView
-                    role={hostRole}
-                    playerName={hostPlayer!.name}
-                    onSubmit={handleHostTranscript}
-                  />
-                </div>
-              ) : (
+        {room.status === 'speaking' && (
+          <div className="w-full max-w-4xl">
+            {hostPlayer ? (() => {
+              const hostRole = ROLES.find(r => r.id === hostPlayer.role)
+
+              // Phase 1: Instructions screen
+              if (hostSpeakingPhase === 'instructions' && hostRole) {
+                return (
+                  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                    <div className="mb-6">
+                      <p className="text-white/40 text-xs uppercase tracking-widest mb-2">The Question</p>
+                      <p className="text-white text-3xl font-bold">{room.decision}</p>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 max-w-lg w-full mb-6">
+                      <div className="text-6xl mb-4">{hostRole.emoji}</div>
+                      <h2 className="text-2xl font-black text-white mb-2">{hostRole.label}</h2>
+                      <p className="text-white/60 text-lg leading-relaxed">{hostRole.prompt}</p>
+                    </div>
+                    <p className="text-white/30 text-sm mb-8">You have 15 seconds when it&apos;s your turn</p>
+                    <button
+                      onClick={() => setHostSpeakingPhase('overview')}
+                      className="bg-[#FF5C00] hover:bg-[#FF8C00] text-white text-xl font-black px-10 py-4 rounded-2xl transition-all orange-glow"
+                    >
+                      Got it, I&apos;m ready →
+                    </button>
+                  </div>
+                )
+              }
+
+              // Phase 3: Host's speaking turn
+              if (hostSpeakingPhase === 'my-turn' && hostRole) {
+                return (
+                  <div>
+                    <p className="text-center text-white/40 text-sm uppercase tracking-widest mb-6">Your turn to speak</p>
+                    <SpeakingView
+                      role={hostRole}
+                      playerName={hostPlayer.name}
+                      onSubmit={handleHostTranscript}
+                    />
+                  </div>
+                )
+              }
+
+              // Phase 2 / 4: Overview — watching others or already spoke
+              return (
                 <div>
                   <div className="text-center mb-8">
                     <h2 className="text-5xl font-black text-white mb-4">Speaking Round</h2>
                     <p className="text-white/40 text-xl">
-                      {hostPlayer && hostHasSpoken
-                        ? 'You\'ve spoken — waiting for others...'
+                      {hostHasSpoken
+                        ? "You've spoken — waiting for others..."
                         : 'Each person has 15 seconds to speak their role'}
                     </p>
                   </div>
                   <PlayerGrid players={players} showSpeaking currentRole={room.current_speaker_role} />
                 </div>
-              )}
-
-              {players.every(p => p.has_spoken) && (
-                <div className="mt-8 text-center">
-                  <button
-                    onClick={handleStartReasoning}
-                    className="bg-[#FF5C00] hover:bg-[#FF8C00] text-white text-2xl font-black px-12 py-6 rounded-2xl transition-all duration-200 orange-glow"
-                  >
-                    All Done — Drop is deciding...
-                  </button>
+              )
+            })() : (
+              <div>
+                <div className="text-center mb-8">
+                  <h2 className="text-5xl font-black text-white mb-4">Speaking Round</h2>
+                  <p className="text-white/40 text-xl">Each person has 15 seconds to speak their role</p>
                 </div>
-              )}
-            </div>
-          )
-        })()}
+                <PlayerGrid players={players} showSpeaking currentRole={room.current_speaker_role} />
+              </div>
+            )}
+
+            {players.every(p => p.has_spoken) && (
+              <div className="mt-8 text-center">
+                <button
+                  onClick={handleStartReasoning}
+                  className="bg-[#FF5C00] hover:bg-[#FF8C00] text-white text-2xl font-black px-12 py-6 rounded-2xl transition-all duration-200 orange-glow"
+                >
+                  All Done — Drop is deciding...
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* STATE C: Reasoning */}
         {room.status === 'reasoning' && (
