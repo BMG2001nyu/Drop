@@ -9,9 +9,10 @@ interface Props {
   revealed?: boolean
   isCurrent?: boolean
   hasSpoken?: boolean
+  transcript?: string | null
 }
 
-export default function RoleCard({ role, playerName, revealed = false, isCurrent, hasSpoken }: Props) {
+export default function RoleCard({ role, playerName, revealed = false, isCurrent, hasSpoken, transcript }: Props) {
   const [flipped, setFlipped] = useState(false)
 
   useEffect(() => {
@@ -49,6 +50,9 @@ export default function RoleCard({ role, playerName, revealed = false, isCurrent
               <div className="w-2 h-2 rounded-full bg-[#FF5C00] animate-pulse" />
               <span className="text-[#FF5C00] text-xs font-bold">SPEAKING</span>
             </div>
+          )}
+          {transcript && !isCurrent && (
+            <p className="text-white/40 text-xs italic truncate">&ldquo;{transcript}&rdquo;</p>
           )}
         </div>
       </div>
