@@ -157,7 +157,7 @@ export default function RoomPage({ params }: Props) {
   useEffect(() => {
     if (room?.status === 'done' && !showDecision) {
       if (decisionTimerRef.current) return // already scheduled
-      decisionTimerRef.current = setTimeout(() => setShowDecision(true), 4000)
+      decisionTimerRef.current = setTimeout(() => setShowDecision(true), 5000)
     }
     return () => {
       if (decisionTimerRef.current) {
@@ -596,17 +596,15 @@ export default function RoomPage({ params }: Props) {
           </div>
         )}
 
-        {/* STATE C: Reasoning — also shown briefly after done so DECISION: line is visible */}
+        {/* STATE C: Reasoning — full-screen takeover; also shown for 5s after done */}
         {(room.status === 'reasoning' || (room.status === 'done' && !showDecision)) && (
-          <div className="w-full max-w-3xl">
-            <ReasoningStream
-              text={reasoningText || room.reasoning_stream || ''}
-              onThoughtComplete={handleThoughtComplete}
-            />
-          </div>
+          <ReasoningStream
+            text={reasoningText || room.reasoning_stream || ''}
+            onThoughtComplete={handleThoughtComplete}
+          />
         )}
 
-        {/* STATE D: Done — shown after 4s delay so reasoning screen has time to land */}
+        {/* STATE D: Done — shown after 5s delay */}
         {room.status === 'done' && room.final_decision && showDecision && (
           <div className="w-full max-w-3xl">
             <DecisionReveal

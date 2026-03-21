@@ -310,7 +310,7 @@ export default function JoinPage({ params }: Props) {
   useEffect(() => {
     if (room?.status === 'done' && !showDecision) {
       if (decisionTimerRef.current) return
-      decisionTimerRef.current = setTimeout(() => setShowDecision(true), 4000)
+      decisionTimerRef.current = setTimeout(() => setShowDecision(true), 5000)
     }
     return () => {
       if (decisionTimerRef.current) {

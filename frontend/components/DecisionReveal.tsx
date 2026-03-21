@@ -45,111 +45,119 @@ export default function DecisionReveal({ decision, reason, roomId, players, reas
       .catch(() => setImageLoading(false))
   }, [decision])
 
+  // Responsive font size based on decision length
+  const titleSize =
+    decision.length > 80 ? 'text-3xl md:text-4xl lg:text-5xl' :
+    decision.length > 40 ? 'text-4xl md:text-5xl lg:text-6xl' :
+    'text-5xl md:text-6xl lg:text-7xl'
+
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center overflow-hidden">
+    <div className="fixed inset-0 bg-[#0a0a0a]">
 
-      {/* Cinematic background image */}
-      {imageData && (
-        <div className="absolute inset-0 z-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`data:${imageData.mime};base64,${imageData.base64}`}
-            alt="decision visual"
-            className="w-full h-full object-cover bg-sharpen"
-          />
-          {/* Dark vignette overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/40" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
-        </div>
-      )}
+      {/* ── Background effects layer (overflow-hidden keeps rings clipped) ── */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
 
-      {/* Loading state — subtle pulse while image loads */}
-      {imageLoading && (
-        <div className="absolute inset-0 z-0">
-          <div className="w-full h-full bg-[#0a0a0a]" />
-          <div className="absolute inset-0 bg-gradient-radial from-orange-900/20 via-transparent to-transparent reasoning-bg" />
-        </div>
-      )}
+        {/* Cinematic background image */}
+        {imageData && (
+          <div className="absolute inset-0 z-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`data:${imageData.mime};base64,${imageData.base64}`}
+              alt="decision visual"
+              className="w-full h-full object-cover bg-sharpen"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/40" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+          </div>
+        )}
 
-      {/* WHITE FLASH */}
-      {phase === 'flash' && (
-        <div className="absolute inset-0 z-50 bg-white blast-flash pointer-events-none" />
-      )}
+        {/* Loading pulse while image loads */}
+        {imageLoading && (
+          <div className="absolute inset-0 z-0">
+            <div className="w-full h-full bg-[#0a0a0a]" />
+            <div className="absolute inset-0 bg-gradient-radial from-orange-900/20 via-transparent to-transparent reasoning-bg" />
+          </div>
+        )}
 
-      {/* SHOCKWAVE RINGS — centered, behind text */}
+        {/* WHITE FLASH */}
+        {phase === 'flash' && (
+          <div className="absolute inset-0 z-50 bg-white blast-flash" />
+        )}
+
+        {/* SHOCKWAVE RINGS */}
+        {(phase === 'blast' || phase === 'full') && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <div className="absolute w-32 h-32 rounded-full border-2 border-[#FF5C00] shockwave" />
+            <div className="absolute w-32 h-32 rounded-full border border-[#FF8C00]/60 shockwave-2" />
+            <div className="absolute w-32 h-32 rounded-full border border-white/20 shockwave-3" />
+          </div>
+        )}
+      </div>
+
+      {/* ── Scrollable content layer ── */}
       {(phase === 'blast' || phase === 'full') && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div className="absolute w-32 h-32 rounded-full border-2 border-[#FF5C00] shockwave" />
-          <div className="absolute w-32 h-32 rounded-full border border-[#FF8C00]/60 shockwave-2" />
-          <div className="absolute w-32 h-32 rounded-full border border-white/20 shockwave-3" />
-        </div>
-      )}
+        <div className="absolute inset-0 z-20 overflow-y-auto">
+          <div className="min-h-full flex flex-col items-center justify-center text-center px-8 py-16 max-w-4xl mx-auto">
 
-      {/* MAIN CONTENT */}
-      {(phase === 'blast' || phase === 'full') && (
-        <div className="relative z-20 flex flex-col items-center text-center px-8 max-w-4xl w-full">
-
-          {/* "Drop has decided" label */}
-          <p
-            className="text-[#FF5C00] text-sm uppercase tracking-[0.3em] font-bold mb-6"
-            style={{ animationDelay: '0.1s' }}
-          >
-            <span className="slide-up" style={{ animationDelay: '0.1s', display: 'inline-block' }}>
-              Drop has decided
-            </span>
-          </p>
-
-          {/* THE DECISION — crashes in */}
-          <h1 className="text-crash text-6xl md:text-7xl font-black text-white leading-tight mb-6 glow-pulse">
-            {decision}
-          </h1>
-
-          {/* Reason */}
-          {reason && phase === 'full' && (
-            <p
-              className="reason-fade text-white/70 text-xl italic max-w-2xl leading-relaxed mb-10"
-              style={{ animationDelay: '0.3s' }}
-            >
-              &ldquo;{reason}&rdquo;
+            {/* "Drop has decided" label */}
+            <p className="text-[#FF5C00] text-sm uppercase tracking-[0.3em] font-bold mb-6">
+              <span className="slide-up" style={{ animationDelay: '0.1s', display: 'inline-block' }}>
+                Drop has decided
+              </span>
             </p>
-          )}
 
-          {/* Players */}
-          {phase === 'full' && (
-            <div
-              className="slide-up flex flex-wrap justify-center gap-3 mb-10"
-              style={{ animationDelay: '0.5s' }}
-            >
-              {players.map(p => (
-                <span
-                  key={p.id}
-                  className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-sm text-white/80"
-                >
-                  {p.role_emoji} {p.name} · {p.role_label}
-                </span>
-              ))}
-            </div>
-          )}
+            {/* THE DECISION */}
+            <h1 className={`text-crash ${titleSize} font-black text-white leading-tight mb-6 glow-pulse break-words w-full`}>
+              {decision}
+            </h1>
 
-          {/* CTA Button */}
-          {phase === 'full' && (
-            <div className="btn-enter flex flex-col items-center gap-4" style={{ animationDelay: '0.8s' }}>
-              <Link
-                href={`/card/${roomId}`}
-                className="inline-block bg-[#FF5C00] hover:bg-[#FF8C00] text-white text-xl font-bold px-10 py-5 rounded-2xl transition-all duration-200 orange-glow hover:scale-[1.02] active:scale-[0.98]"
+            {/* Reason */}
+            {reason && phase === 'full' && (
+              <p
+                className="reason-fade text-white/70 text-lg md:text-xl italic max-w-2xl leading-relaxed mb-10"
+                style={{ animationDelay: '0.3s' }}
               >
-                See Decision Card →
-              </Link>
-              {reasoning && (
-                <button
-                  onClick={() => setShowReasoningModal(true)}
-                  className="text-white/40 hover:text-white/80 text-sm underline underline-offset-4 transition-colors duration-200"
+                &ldquo;{reason}&rdquo;
+              </p>
+            )}
+
+            {/* Players */}
+            {phase === 'full' && (
+              <div
+                className="slide-up flex flex-wrap justify-center gap-3 mb-10"
+                style={{ animationDelay: '0.5s' }}
+              >
+                {players.map(p => (
+                  <span
+                    key={p.id}
+                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-sm text-white/80"
+                  >
+                    {p.role_emoji} {p.name} · {p.role_label}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* CTA */}
+            {phase === 'full' && (
+              <div className="btn-enter flex flex-col items-center gap-4" style={{ animationDelay: '0.8s' }}>
+                <Link
+                  href={`/card/${roomId}`}
+                  className="inline-block bg-[#FF5C00] hover:bg-[#FF8C00] text-white text-xl font-bold px-10 py-5 rounded-2xl transition-all duration-200 orange-glow hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  Why did Drop decide this?
-                </button>
-              )}
-            </div>
-          )}
+                  See Decision Card →
+                </Link>
+                {reasoning && (
+                  <button
+                    onClick={() => setShowReasoningModal(true)}
+                    className="text-white/40 hover:text-white/80 text-sm underline underline-offset-4 transition-colors duration-200"
+                  >
+                    Why did Drop decide this?
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -159,15 +167,11 @@ export default function DecisionReveal({ decision, reason, roomId, players, reas
           className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4"
           onClick={() => setShowReasoningModal(false)}
         >
-          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-
-          {/* Sheet */}
           <div
             className="relative z-10 w-full max-w-2xl bg-[#111111] border border-white/10 rounded-3xl overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
               <div>
                 <p className="text-[#FF5C00] text-xs uppercase tracking-widest font-bold mb-1">Drop&apos;s Reasoning</p>
@@ -181,7 +185,6 @@ export default function DecisionReveal({ decision, reason, roomId, players, reas
               </button>
             </div>
 
-            {/* Reasoning thoughts */}
             <div className="px-6 py-5 max-h-[60vh] overflow-y-auto space-y-3">
               {reasoning.split('\n').filter(l => l.trim()).map((line, i) => {
                 const isDecision = /^DECISION:/i.test(line.trim())
@@ -207,7 +210,6 @@ export default function DecisionReveal({ decision, reason, roomId, players, reas
               })}
             </div>
 
-            {/* Footer */}
             <div className="px-6 py-4 border-t border-white/10">
               <button
                 onClick={() => setShowReasoningModal(false)}
