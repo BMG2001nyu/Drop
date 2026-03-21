@@ -19,20 +19,30 @@ export async function POST(req: Request) {
 
     if (playerError) throw playerError
 
-    // Check if all players have spoken
+    // Get all players in join order to determine next speaker
     const { data: players } = await supabase
       .from('players')
-      .select('has_spoken')
+      .select('*')
       .eq('room_id', roomId)
+      .order('joined_at', { ascending: true })
 
     const allSpoken = players?.every(p => p.has_spoken)
 
     if (allSpoken && players && players.length > 0) {
-      // Trigger reasoning phase
+      // All done — trigger reasoning phase
       await supabase
         .from('rooms')
         .update({ status: 'reasoning' })
         .eq('id', roomId)
+    } else {
+      // Advance to next player who hasn't spoken
+      const nextPlayer = players?.find(p => !p.has_spoken)
+      if (nextPlayer) {
+        await supabase
+          .from('rooms')
+          .update({ current_speaker_role: nextPlayer.role })
+          .eq('id', roomId)
+      }
     }
 
     return NextResponse.json({ success: true, allSpoken })
