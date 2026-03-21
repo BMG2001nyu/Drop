@@ -38,6 +38,7 @@ export async function POST(req: Request) {
         .from('rooms')
         .update({ status: 'reasoning', current_speaker_role: null })
         .eq('id', roomId)
+
       return NextResponse.json({ success: true, allSpoken: true })
     }
 
