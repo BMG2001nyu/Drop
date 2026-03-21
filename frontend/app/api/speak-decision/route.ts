@@ -22,7 +22,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_monolingual_v1',
+          model_id: 'eleven_turbo_v2',
           voice_settings: {
             stability: type === 'decision' ? 0.3 : 0.5,
             similarity_boost: 0.8,
