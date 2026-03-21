@@ -125,3 +125,91 @@ a {
 .decision-drop {
   animation: decision-drop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
+
+/* Cinematic blast animations */
+@keyframes blast-flash {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.blast-flash {
+  animation: blast-flash 0.6s ease-out forwards;
+}
+
+@keyframes text-crash {
+  0% { transform: scale(4) translateY(-20px); opacity: 0; filter: blur(8px); }
+  60% { transform: scale(0.95) translateY(4px); opacity: 1; filter: blur(0); }
+  80% { transform: scale(1.02); }
+  100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); }
+}
+
+.text-crash {
+  animation: text-crash 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes shockwave {
+  0% { transform: scale(0); opacity: 0.8; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+.shockwave {
+  animation: shockwave 1.2s ease-out forwards;
+}
+
+.shockwave-2 {
+  animation: shockwave 1.4s ease-out 0.15s forwards;
+}
+
+.shockwave-3 {
+  animation: shockwave 1.6s ease-out 0.3s forwards;
+}
+
+@keyframes bg-sharpen {
+  0% { opacity: 0; filter: blur(40px) brightness(0.3); transform: scale(1.15); }
+  40% { opacity: 0.6; }
+  100% { opacity: 1; filter: blur(0px) brightness(0.45); transform: scale(1); }
+}
+
+.bg-sharpen {
+  animation: bg-sharpen 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slide-up-fade {
+  0% { transform: translateY(40px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.slide-up {
+  animation: slide-up-fade 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 0 0 40px rgba(255, 92, 0, 0.8), 0 0 80px rgba(255, 92, 0, 0.4); }
+  50% { text-shadow: 0 0 80px rgba(255, 92, 0, 1), 0 0 160px rgba(255, 92, 0, 0.6), 0 0 240px rgba(255, 140, 0, 0.3); }
+}
+
+.glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes reason-fade {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.reason-fade {
+  animation: reason-fade 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes btn-enter {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.btn-enter {
+  animation: btn-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+}
