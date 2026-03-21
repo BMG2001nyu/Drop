@@ -143,6 +143,14 @@ export default function RoomPage({ params }: Props) {
     // Voice callouts during reasoning removed — browser blocks audio without user gesture
   }, [])
 
+  // Trigger reasoning when room.status becomes 'reasoning' via polling path
+  // (realtime handles it too, but polling only updates state without calling handleStartReasoning)
+  useEffect(() => {
+    if (room?.status === 'reasoning' && !reasoningStarted.current) {
+      handleStartReasoning()
+    }
+  }, [room?.status, handleStartReasoning])
+
   const handleStartDrop = async () => {
     if (!room) return
 
