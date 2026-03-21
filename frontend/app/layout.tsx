@@ -38,6 +38,8 @@ export default function RootLayout({
           headerTitle: 'text-white font-black',
           formButtonPrimary: 'bg-[#FF5C00] hover:bg-[#FF8C00]',
           footerActionLink: 'text-[#FF5C00] hover:text-[#FF8C00]',
+          socialButtonsBlockButton: 'border border-white/20 bg-white/5 text-white hover:bg-white/10',
+          socialButtonsBlockButtonText: 'text-white font-medium',
         },
       }}
     >
