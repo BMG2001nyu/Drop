@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, type Room, type Player } from '@/lib/supabase'
 import type { Role } from '@/lib/roles'
 import SpeakingView from '@/components/SpeakingView'
@@ -43,6 +43,8 @@ export default function JoinPage({ params }: Props) {
   const [availableRoles, setAvailableRoles] = useState<Role[]>([])
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  const [showDecision, setShowDecision] = useState(false)
+  const decisionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchPlayers = useCallback(async () => {
     const { data } = await supabase
@@ -304,8 +306,22 @@ export default function JoinPage({ params }: Props) {
     </div>
   )
 
+  // When reasoning completes, hold on the DECISION: reveal for 4s before blasting in
+  useEffect(() => {
+    if (room?.status === 'done' && !showDecision) {
+      if (decisionTimerRef.current) return
+      decisionTimerRef.current = setTimeout(() => setShowDecision(true), 4000)
+    }
+    return () => {
+      if (decisionTimerRef.current) {
+        clearTimeout(decisionTimerRef.current)
+        decisionTimerRef.current = null
+      }
+    }
+  }, [room?.status, showDecision])
+
   // Override all local states when room is reasoning or done — show shared experience
-  if (room?.status === 'reasoning') {
+  if (room?.status === 'reasoning' || (room?.status === 'done' && !showDecision)) {
     return (
       <main className="min-h-screen bg-[#0a0a0a] flex flex-col">
         <ReasoningStream text={room.reasoning_stream || ''} />
@@ -313,7 +329,7 @@ export default function JoinPage({ params }: Props) {
     )
   }
 
-  if (room?.status === 'done' && room.final_decision) {
+  if (room?.status === 'done' && room.final_decision && showDecision) {
     return (
       <DecisionReveal
         decision={room.final_decision}

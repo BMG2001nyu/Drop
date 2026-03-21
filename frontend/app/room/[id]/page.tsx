@@ -43,10 +43,12 @@ export default function RoomPage({ params }: Props) {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [reasoningText, setReasoningText] = useState('')
+  const [showDecision, setShowDecision] = useState(false)
   const hasAnnouncedDecision = useRef(false)
   const reasoningStarted = useRef(false)
   const hasAnnouncedMidpoint = useRef(false)
   const hasPlayedInstructions = useRef(false)
+  const decisionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Host auto-join state
   const [hostJoinState, setHostJoinState] = useState<'prompt' | 'joined' | 'pick-role'>('prompt')
@@ -150,6 +152,20 @@ export default function RoomPage({ params }: Props) {
       handleStartReasoning()
     }
   }, [room?.status, handleStartReasoning])
+
+  // When reasoning completes, show the DECISION: reveal for 4s before blasting into DecisionReveal
+  useEffect(() => {
+    if (room?.status === 'done' && !showDecision) {
+      if (decisionTimerRef.current) return // already scheduled
+      decisionTimerRef.current = setTimeout(() => setShowDecision(true), 4000)
+    }
+    return () => {
+      if (decisionTimerRef.current) {
+        clearTimeout(decisionTimerRef.current)
+        decisionTimerRef.current = null
+      }
+    }
+  }, [room?.status, showDecision])
 
   const handleStartDrop = async () => {
     if (!room) return
@@ -580,18 +596,18 @@ export default function RoomPage({ params }: Props) {
           </div>
         )}
 
-        {/* STATE C: Reasoning */}
-        {room.status === 'reasoning' && (
+        {/* STATE C: Reasoning — also shown briefly after done so DECISION: line is visible */}
+        {(room.status === 'reasoning' || (room.status === 'done' && !showDecision)) && (
           <div className="w-full max-w-3xl">
             <ReasoningStream
-            text={reasoningText || room.reasoning_stream || ''}
-            onThoughtComplete={handleThoughtComplete}
-          />
+              text={reasoningText || room.reasoning_stream || ''}
+              onThoughtComplete={handleThoughtComplete}
+            />
           </div>
         )}
 
-        {/* STATE D: Done */}
-        {room.status === 'done' && room.final_decision && (
+        {/* STATE D: Done — shown after 4s delay so reasoning screen has time to land */}
+        {room.status === 'done' && room.final_decision && showDecision && (
           <div className="w-full max-w-3xl">
             <DecisionReveal
               decision={room.final_decision}
