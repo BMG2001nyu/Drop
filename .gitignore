@@ -1,0 +1,20 @@
+# Dependencies
+frontend/node_modules/
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Environment files - NEVER commit these
+frontend/.env.local
+frontend/.env*.local
+
+# Playwright test artifacts
+.playwright-mcp/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+/tmp/
