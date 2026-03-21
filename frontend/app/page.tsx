@@ -1,4 +1,4 @@
-import { Show, UserButton, SignInButton } from '@clerk/nextjs'
+import { SignedIn, SignedOut, UserButton, SignInButton } from '@clerk/nextjs'
 import Link from 'next/link'
 import HomeForm from '@/components/HomeForm'
 
@@ -10,14 +10,14 @@ export default function HomePage() {
 
       {/* Top-right auth nav */}
       <div className="fixed top-5 right-6 z-20 flex items-center gap-3">
-        <Show when="signed-out">
+        <SignedOut>
           <SignInButton mode="modal">
             <button className="text-white/40 hover:text-white text-sm font-medium transition-colors px-4 py-2 rounded-xl hover:bg-white/5">
               Sign in
             </button>
           </SignInButton>
-        </Show>
-        <Show when="signed-in">
+        </SignedOut>
+        <SignedIn>
           <Link
             href="/dashboard"
             className="text-white/40 hover:text-[#FF5C00] text-sm font-medium transition-colors px-4 py-2 rounded-xl hover:bg-white/5"
@@ -29,7 +29,7 @@ export default function HomePage() {
               elements: { avatarBox: 'w-8 h-8' },
             }}
           />
-        </Show>
+        </SignedIn>
       </div>
 
       <div className="w-full max-w-lg relative z-10">
