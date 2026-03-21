@@ -43,6 +43,7 @@ export default function RoomPage({ params }: Props) {
   const [reasoningText, setReasoningText] = useState('')
   const hasAnnouncedDecision = useRef(false)
   const reasoningStarted = useRef(false)
+  const hasAnnouncedMidpoint = useRef(false)
 
   // Host auto-join state
   const [hostJoinState, setHostJoinState] = useState<'prompt' | 'joined'>('prompt')
@@ -112,7 +113,11 @@ export default function RoomPage({ params }: Props) {
       body: JSON.stringify({ roomId: params.id }),
     })
 
-    if (!res.body) return
+    if (!res.body || !res.ok) {
+      console.error('start-reasoning failed:', res.status)
+      reasoningStarted.current = false // allow retry
+      return
+    }
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
 
@@ -122,7 +127,15 @@ export default function RoomPage({ params }: Props) {
       const chunk = decoder.decode(value)
       setReasoningText(prev => prev + chunk)
     }
-  }, [params.id])
+
+    // Stream is done — server has already updated status to 'done' in Supabase.
+    // Fetch immediately instead of waiting up to 2s for the polling interval.
+    await fetchData()
+  }, [params.id, fetchData])
+
+  const handleThoughtComplete = useCallback((_thought: string, _index: number) => {
+    // Voice callouts during reasoning removed — browser blocks audio without user gesture
+  }, [])
 
   const handleStartDrop = async () => {
     if (!room) return
@@ -370,7 +383,10 @@ export default function RoomPage({ params }: Props) {
         {/* STATE C: Reasoning */}
         {room.status === 'reasoning' && (
           <div className="w-full max-w-3xl">
-            <ReasoningStream text={reasoningText || room.reasoning_stream || ''} />
+            <ReasoningStream
+            text={reasoningText || room.reasoning_stream || ''}
+            onThoughtComplete={handleThoughtComplete}
+          />
           </div>
         )}
 
