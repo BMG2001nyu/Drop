@@ -1,9 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { supabase, type Room } from '@/lib/supabase'
+import { supabase, type Room, type Player } from '@/lib/supabase'
 import type { Role } from '@/lib/roles'
 import SpeakingView from '@/components/SpeakingView'
+import ReasoningStream from '@/components/ReasoningStream'
+import DecisionReveal from '@/components/DecisionReveal'
 
 interface Props {
   params: { id: string }
@@ -40,12 +42,12 @@ export default function JoinPage({ params }: Props) {
   const [transcript, setTranscript] = useState('')
   const [availableRoles, setAvailableRoles] = useState<Role[]>([])
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
-  const [allPlayers, setAllPlayers] = useState<PlayerInRoom[]>([])
+  const [allPlayers, setAllPlayers] = useState<Player[]>([])
 
   const fetchPlayers = useCallback(async () => {
     const { data } = await supabase
       .from('players')
-      .select('id, name, role, role_emoji, role_label, has_spoken, transcript')
+      .select('*')
       .eq('room_id', params.id)
       .order('joined_at', { ascending: true })
     if (data) setAllPlayers(data)
@@ -207,6 +209,17 @@ export default function JoinPage({ params }: Props) {
     setState('spoke')
   }
 
+  // Fetch room on mount + poll so even pre-join users see reasoning/done screens
+  useEffect(() => {
+    const fetch = () =>
+      supabase.from('rooms').select('*').eq('id', params.id).single()
+        .then(({ data }) => { if (data) setRoom(data as Room) })
+    fetch()
+    fetchPlayers()
+    const interval = setInterval(fetch, 2000)
+    return () => clearInterval(interval)
+  }, [params.id, fetchPlayers])
+
   // Listen for room status changes + subscribe to players table
   useEffect(() => {
     if (!player || !room) return
@@ -290,6 +303,26 @@ export default function JoinPage({ params }: Props) {
       </div>
     </div>
   )
+
+  // Override all local states when room is reasoning or done — show shared experience
+  if (room?.status === 'reasoning') {
+    return (
+      <main className="min-h-screen bg-[#0a0a0a] flex flex-col">
+        <ReasoningStream text={room.reasoning_stream || ''} />
+      </main>
+    )
+  }
+
+  if (room?.status === 'done' && room.final_decision) {
+    return (
+      <DecisionReveal
+        decision={room.final_decision}
+        reason={room.final_reason || ''}
+        roomId={params.id}
+        players={allPlayers}
+      />
+    )
+  }
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4 py-8">
@@ -467,28 +500,6 @@ export default function JoinPage({ params }: Props) {
         </div>
       )}
 
-      {/* Done */}
-      {state === 'done' && room && (
-        <div className="w-full max-w-sm text-center">
-          <div className="text-7xl mb-6">🎯</div>
-          <h2 className="text-3xl font-black gradient-text mb-3">Drop has decided!</h2>
-          {room.final_decision && (
-            <p className="text-white text-2xl font-bold mb-6">{room.final_decision}</p>
-          )}
-          <a
-            href={`/card/${params.id}`}
-            className="block w-full bg-[#FF5C00] text-white text-xl font-bold py-5 rounded-2xl text-center"
-          >
-            See Decision Card →
-          </a>
-          <a
-            href="/"
-            className="block w-full mt-3 bg-white/10 text-white text-xl font-bold py-5 rounded-2xl text-center"
-          >
-            Start a New Drop
-          </a>
-        </div>
-      )}
     </main>
   )
 }
